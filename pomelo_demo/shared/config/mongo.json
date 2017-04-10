@@ -1,0 +1,16 @@
+{
+    "development":{
+    "host":"mongodb://127.0.0.1",
+    "port":27017,
+    "dbname":"watch",
+    "admin":"huangge9527",
+    "passWord":"jichang9527"
+    },
+  "production": {
+      "host": "mongodb://127.0.0.1",
+      "port": 27017,
+      "dbname": "watch",
+      "admin": "huangge9527",
+      "passWord": "jichang9527"
+    }
+}

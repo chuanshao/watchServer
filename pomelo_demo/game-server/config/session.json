@@ -1,0 +1,4 @@
+{
+  "secret": "kevin_little_dove_session_secret",
+  "expire": 21600000
+}
