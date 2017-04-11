@@ -15,6 +15,9 @@ module.exports = {
         FA_USER_NOT_EXIST: 	1003,
         FA_TOKEN_ILLEGAL:1004
     },
+    ROOM:{
+        ROOM_IS_NOT_EXIT:5001,
+    },
     GAME:{
         SEND_POKE_Fail: 4001,
         SEND_POKE_Error_Sequence: 4002,

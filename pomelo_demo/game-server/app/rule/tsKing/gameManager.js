@@ -4,7 +4,7 @@
 var Code = require('../../../../shared/code');
 var Player = require('./player');
 var ass = require('../../util/ass');
-var friendsGameManager = function(setting)
+module.exports = function(setting)
 {
     return new Handler(setting);
 }
@@ -23,7 +23,7 @@ var pro = Handler.prototype;
  * @param uid
  * @param pos
  */
-pro.playerEnterRoom = function(uid , pos , cb){
+pro.playerEnterRoom = function(uid  , cb){
     var player = this._getPlayer(uid);
     if(this.isStarted){
         if(player != null){//玩家重新进入房间,返回玩家所需要的所有信息
