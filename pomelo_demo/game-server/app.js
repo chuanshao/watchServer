@@ -1,5 +1,6 @@
 var pomelo = require('pomelo');
 var routeUtil = require('./app/util/routeUtils');
+var RoomService = require('./app/util/roomService');
 /**
  * Init app for client.
  */
@@ -8,7 +9,6 @@ app.set('name', 'pomelo_demo');
 // app configuration
 
 app.configure('production|development' , function(){
-
     app.loadConfig('mongo' , app.getBase() + '/../shared/config/mongo.json');//加載mongodb配置表
 });
 app.configure('production|development', 'connector', function() {
@@ -46,7 +46,9 @@ app.configure('production|development', 'gate', function(){
             }
         });
 });
-
+app.configure('production|development', 'connector', function() {
+    app.set('roomService', new RoomService(app));
+});
 // start app
 app.start();
 

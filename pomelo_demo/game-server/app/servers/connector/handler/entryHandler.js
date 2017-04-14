@@ -19,7 +19,7 @@ var Handler = function(app) {
  * @param  {Function} next    next step callback
  * @return {Void}
  */
-Handler.prototype.entry = function(msg , session , nex)
+Handler.prototype.entry = function(msg , session , next)
 {
 	var token = msg.token , self = this;
 	if(!token){

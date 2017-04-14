@@ -24,7 +24,8 @@ module.exports = {
         GAME_IS_START:4003,
         NO_THIS_POS:4004,
         POS_HAS_PLAYER:4005,
-        ROOM_IS_NOT_EXIT:4006
+        ROOM_IS_NOT_EXIT:4006,
+        BE_READY_ERROR:4007
     },
 
     GATE: {

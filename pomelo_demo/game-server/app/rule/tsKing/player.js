@@ -7,6 +7,7 @@ var Player = function(uid)
     this.totalPokes = [];
     this.playedPokes = [];
     this.nextPlayer = null;
+    this.isReady = false;
 }
 var pro = Player.prototype;
 pro.getLastPlayed = function()
@@ -29,6 +30,10 @@ pro.getNextPlayer = function()
 {
     return this.nextPlayer;
 }
-
-
+pro.getPlayedPokes = function(){
+    return this.playedPokes;
+}
+pro.getTotalPokes = function(){
+    return this.totalPokes;
+}
 module.exports = Player;

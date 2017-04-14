@@ -25,14 +25,17 @@ var pro = Handler.prototype;
  */
 pro.playerEnterRoom = function(uid  , cb){
     var player = this._getPlayer(uid);
+    var self = this;
+    var returnData = {};
+    returnData["isStarted"] = this.isStarted;
     if(this.isStarted){
-        if(player != null){//玩家重新进入房间,返回玩家所需要的所有信息
-
+        if(player){//玩家重新进入房间,返回玩家所需要的所有信息
+            cb(null , returnData);
         }else{
             cb(Code.GAME.ROOM_IS_NOT_EXIT , null); //房间不存在
         }
     }else{
-        if(player == null){
+        if(!player){
             var emptyPos = this._getEmptyPos();
             if(emptyPos == -1){//没有空位置
                 cb(Code.GAME.ROOM_IS_NOT_EXIT , null); //房间不存在
@@ -40,10 +43,40 @@ pro.playerEnterRoom = function(uid  , cb){
             }
             player = new Player(uid);
             this.posWithPlayer[emptyPos] = player;
+            cb(null , returnData);
         }else{//重新进入  但是没有开始返回现在的状态
-
+            cb(null , returnData);
         }
     }
+}
+pro.getPlayerPokeAnPosData = function(uid){
+    var returnValue = [];
+    for(var i = 0 ; i < this.playerNum ; i++){
+        var player = this.posWithPlayer[i];
+        if(player){
+            var item = {};
+            item["userId"] = player.userId;
+            item["pos"] = i;
+            item["playedPokes"] = player.getPlayedPokes();
+            if(player.userId == uid){
+                item["totalPokes"] = player.getTotalPokes();
+            }
+            returnValue.push(item);
+        }
+    }
+    return returnValue;
+}
+pro.getPlayerPosData = function(){
+    var returnValue = [];
+    for(var i = 0 ; i < this.playerNum ; i++){
+        var player = this.posWithPlayer[i];
+        if(player){
+            var uid = player.userId;
+            var item = {"uid":uid , "pos" : i };
+            returnValue.push(item);
+        }
+    }
+    return returnValue;
 }
 /**
  * 改变位置
@@ -69,7 +102,7 @@ pro.changePos = function(uid , pos , cb){
         this.posWithPlayer[currentPos] =null;
     }
     this.posWithPlayer[pos] =player;
-    cb(null , pos);
+    cb(null , {"isSuccess" : true});
 }
 
 /**
@@ -78,20 +111,30 @@ pro.changePos = function(uid , pos , cb){
  * @param cb  是否开始
  */
 pro.playerReady = function(uid , cb){
-    self = this;
+    var self = this;
     if(this.isStarted) {
-        cb(Code.GAME.GAME_IS_START);
+        cb(Code.GAME.GAME_IS_START , null);
         return;
     }
-    if(!this._getPlayer(uid)){
-        this.readyNum ++;
+    var player = this._getPlayer(uid)
+    if(!player && !player.isReady){
+        player.isReady = true;
+    }else{
+        cb(Code.GAME.BE_READY_ERROR , null);
+        return;
     }
-    if(this.readyNum == this.playerNum){ //
+    var cbData = {};
+    cbData["readyResult"] = true;
+    if(self._isAllReady()){ //所有玩家都已经准备就绪
+        cbData["isStart"] = true;
+        cbData["playersInfo"] = self._getClientNeedData();
         this.isStarted = true;
-
         this._dealingCard(function(err , res){
-            cb(self.posWithPlayer);
+            cb(null , cbData);
         });
+    }else{
+        cbData["isStart"] = false;
+        cb(null , cbData);
     }
 }
 /**
@@ -130,7 +173,7 @@ pro._linkPlayer = function()
 }
 pro._getEmptyPos = function(){
     for(var i = 0 ; i < this.playerNum ; i ++){
-        if(this.posWithPlayer[i]){
+        if(!this.posWithPlayer[i]){
             return i;
         }
     }
@@ -140,7 +183,7 @@ pro._getEmptyPos = function(){
  * 发
  * @private
  */
-pro._dealingCard = function(){
+pro._dealingCard = function(cb){
     ass.getConfig("tspoke/withoutTT.json" ,function (err , jsonData) {
         var self = this;
         var readyArr = pro._washCard(jsonData , 0 , 3);//
@@ -149,6 +192,7 @@ pro._dealingCard = function(){
             var player = self.posWithPlayer[i];
             player.setPokes(readyArr.splice(eachPlayerHas * i , eachPlayerHas * i+1));
         }
+        cb(null , null);
     });
 }
 /**
@@ -183,4 +227,25 @@ pro._getPlayer = function(uid){
     return null;
 }
 
-module.exports = friendsGameManager;
+pro._getPlayerAndPos = function(){
+    var returnValue = [];
+    for(var i = 0 ; i < this.playerNum ; i++){
+        var player = this.posWithPlayer[i];
+        if(player){
+            var uid = player.userId;
+            var item = {"uid":uid , "pos" : i , "playedPokes" : playedPokes , "totalPokes":totalPokes};
+            returnValue.push(item);
+        }
+    }
+    return returnValue;
+}
+
+pro._isAllReady = function(){
+    for(var i = 0 ; i < this.playerNum ; i++){
+        var player = this.posWithPlayer[i];
+        if(!player || !player.isReady){
+           return false;
+        }
+    }
+    return true;
+}
