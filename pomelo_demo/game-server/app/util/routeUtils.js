@@ -5,7 +5,7 @@ var exp = module.exports;
 var dispatcher = require('./dispatcher');
 
 exp.gameRoom = function(session, msg, app, cb) {
-    var chatServers = app.getServersByType('game_room');
+    var chatServers = app.getServersByType('game');
 
     if(!chatServers || chatServers.length === 0) {
         cb(new Error('can not find chat servers.'));

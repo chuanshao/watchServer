@@ -19,6 +19,7 @@ var pro = Handler.prototype;
  */
 pro.authPlayedPoke = function(player , lastPlayer)
 {
+
     return true;
 }
 

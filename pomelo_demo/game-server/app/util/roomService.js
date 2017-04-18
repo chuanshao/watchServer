@@ -1,8 +1,8 @@
 /**
  * Created by DELL on 2017/4/11.
  */
-var Room = require('./room');
 var roomService = null;
+var Room = require('./room');
 var dispatcher = require('./dispatcher');
 var Code = require('../../../shared/code');
 var async = require('async');
@@ -21,36 +21,17 @@ var pro = Handler.prototype;
 
 pro.createRoom = function(uid , setting , cb){
     var channelService = this.app.get("channelService");
+    var gameService = this.app.get("gameService");
     var roomName = "" + this.roomStart;
     if(this.roomStart > 999999){
         roomName = "" + this.roomPool.pop();
     }
     var c = channelService.createChannel(roomName);
-    var room = new Room(setting);
+    var game = gameService.createGame(roomName , setting);
+    var room = new Room(setting , game , c);
     this.rooms[roomName] = room;
     this.roomStart ++;
     cb(null , {"roomId":roomName});
-}
-pro.enterRoom = function(uid , roomName , cb){
-    var channelService = this.app.get("channelService");
-    var room = this.getRoom(roomName);
-    var channel = channelService.getChannel("roomName" , false);
-    var sid = getSidByUid(uid , this.app);
-    if(!room || !channel){
-        cb(Code.ROOM.ROOM_IS_NOT_EXIT , null);
-    }else{
-        room.add(uid , sid , function (err , res) {
-            if(err){
-                cb(err , null);
-            }else{
-                channel.add(uid , sid);
-                channel.pushMessage("newPlayerEnter" , {"123" : 111} , function (err, res) {
-                    console.log("pushMessage/........................");
-                });
-                cb(null , res);
-            }
-        });
-    }
 }
 pro.getRoom = function(roomId){
     return this.rooms[roomId];
@@ -64,10 +45,3 @@ pro.broadcast = function (stype, route, msg, opts, cb) {
     var channelService = this.app.get("channelService");
     channelService.broadcast(stype, route, msg, opts, cb);
 }
-var getSidByUid = function(uid, app) {
-    var connector = dispatcher.dispatch(uid, app.getServersByType('connector'));
-    if(connector) {
-        return connector.id;
-    }
-    return null;
-};

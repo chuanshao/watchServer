@@ -1,22 +1,23 @@
 /**
  * Created by DELL on 2017/4/11.
  */
-var GameManager = require('../rule/tsKing/gameManager');
-module.exports = function( setting){
-    return new RoomHandler( setting);
+module.exports = function( setting , game , channel){
+    return new RoomHandler( setting , game , channel);
 }
-var RoomHandler = function( setting){
-    this.gameManager = new GameManager(setting);
+var RoomHandler = function(channel , game , setting){
+    this.game = game;
+    this.channel = channel;
 }
 RoomHandler.prototype.add = function(uid , sid , cb){
     var self = this;
-    this.gameManager.playerEnterRoom(uid , function (err , res) {
+    this.channel.add(uid , sid);
+    this.game.add(uid , function (err , res) {
         if(err){
             cb(err , null);
         }else{
             var start = res.isStarted;
-            var playerPos = self.gameManager.getPlayerPosData();
-            var playerPosWithPokes = self.gameManager.getPlayerPokeAnPosData(uid);
+            var playerPos = self.game.getPlayerPosData();
+            var playerPosWithPokes = self.game.getPlayerPokeAnPosData(uid);
             var returnData = {};
             returnData["isStart"] = start;
             if(err){
@@ -33,15 +34,23 @@ RoomHandler.prototype.add = function(uid , sid , cb){
         }
     });
 }
+RoomHandler.prototype.sendPokes = function(uid , sid , pokes , cb){
+    this.game.sendPokes(uid , pokes , cb);
+}
 RoomHandler.prototype.leave = function(uid , sid){
-    this.gameManager.playerLeave(uid);
+    this.game.playerLeave(uid);
+    this.channel.leave(uid , sid);
 }
 RoomHandler.prototype.getMembers = function(){
-}
-RoomHandler.prototype.getMember = function(uid){
-}
-RoomHandler.prototype.destroy = function () {
 
 }
+RoomHandler.prototype.getMember = function(uid){
+
+}
+RoomHandler.prototype.destroy = function () {
+    this.channel.destroy();
+    this.game.destroy();
+}
 RoomHandler.prototype.pushMessage = function (route, msg, opts, cb) {
+    this.channel.pushMessage(route , msg , opts , cb);
 }
