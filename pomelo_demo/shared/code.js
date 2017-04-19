@@ -27,7 +27,10 @@ module.exports = {
         ROOM_IS_NOT_EXIT:4006,
         BE_READY_ERROR:4007
     },
-
+    Chat:{
+        FA_UNKNOW_CONNECTOR:6001,
+        FA_CHANNEL_CREATE:6002
+    },
     GATE: {
         FA_NO_SERVER_AVAILABLE: 2001
     }

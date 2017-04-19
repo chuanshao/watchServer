@@ -1,7 +1,7 @@
 /**
  * Created by DELL on 2017/4/17.
  */
-var Game = require('./tswGame');
+var Game = require('./../rule/tsKing/tswGame');
 module.exports = function(app) {
     return new Handler(app);
 }

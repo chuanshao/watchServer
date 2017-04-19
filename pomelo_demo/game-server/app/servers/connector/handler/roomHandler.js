@@ -42,6 +42,11 @@ pro.createRoom = function(msg , session , next)
 {
     var userId = msg.userId;
     var setting = msg.setting;
+    async.parallel([
+
+    ],function (err , res) {
+        
+    })
     this.roomService.createRoom(userId , setting , function (err , res) {
         if(err){
             next(err , null);
