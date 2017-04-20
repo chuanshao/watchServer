@@ -1,6 +1,7 @@
 var pomelo = require('pomelo');
 var routeUtil = require('./app/util/routeUtils');
 var RoomService = require('./app/util/roomService');
+var ChatService = require('./app/services/chatService');
 /**
  * Init app for client.
  */
@@ -46,8 +47,11 @@ app.configure('production|development', 'gate', function(){
             }
         });
 });
-app.configure('production|development', 'connector', function() {
-    app.set('roomService', new RoomService(app));
+// app.configure('production|development', 'connector', function() {
+//     app.set('roomService', new RoomService(app));
+// });
+app.configure('production|development', 'chat', function() {
+    app.set('chatService', new ChatService(app));
 });
 // start app
 app.start();

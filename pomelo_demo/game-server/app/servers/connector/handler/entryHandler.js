@@ -21,12 +21,16 @@ var Handler = function(app) {
  */
 Handler.prototype.entry = function(msg , session , next)
 {
+	var uid = msg.userId;
+	session.bind(uid);
+	next(null , {"success":true});
+	return;
 	var token = msg.token , self = this;
 	if(!token){
 		next(new Error('invalid entry request: empty token'), {code: Code.FAIL});
 		return;
 	}
-	var uid;
+
 	async.waterfall([
 		function(cb){
 			self.app.rpc.auth.authRemote.auth(session , token , cb);//先检测当前用户的登陆状态

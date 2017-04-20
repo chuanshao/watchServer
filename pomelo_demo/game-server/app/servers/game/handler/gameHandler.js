@@ -8,7 +8,7 @@ var Code = require('../../../../../shared/code');
 var async = require('async');
 var messageService = require('../../../domain/messageService');
 module.exports = function(app) {
-    return new ChannelHandler(app, app.get('gameSevice'));
+    return new GameHandler(app, app.get('gameSevice'));
 };
 
 var GameHandler = function(app, gameSevice) {
@@ -53,7 +53,7 @@ GameHandler.prototype.sendPokes = function(msg , session , next){
                 next(err , res);
             });
         },
-        function(callback){//向其他玩家发消息
+        function(callback){//向其他玩家发消息s
             messageService.pushMessageToPlayer();
         }
     ],function(err , res){
@@ -61,6 +61,9 @@ GameHandler.prototype.sendPokes = function(msg , session , next){
     });
 }
 
+GameHandler.prototype.getCurrentStatus = function (msg , session , next) {
+    
+}
 GameHandler.prototype.leave = function (msg , session , next) {
     
 }

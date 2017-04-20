@@ -17,10 +17,10 @@ function setContent(str) {
 }
 ChannelHandler.prototype.send = function (msg , session , next) {
     var channelName , uid , content , code;
-    uid = session.uid;
+    uid = msg.uid;
     channelName = msg.channelName;
     msg.content = setContent(msg.content);
-    content = { uid: uid, content: msg.content, kind: msg.kind || 0, from: msg.from};
+    content = { uid: uid, content: msg.content};
     this.chatService.pushMessageByChannel(channelName, content, function(err, res) {
         if(err) {
             code = Code.FAIL;
@@ -31,4 +31,11 @@ ChannelHandler.prototype.send = function (msg , session , next) {
         }
         next(null, {code: code});
     });
+}
+
+ChannelHandler.prototype.add = function (msg , session , next) {
+    var uid = msg["userId"];
+    var roomName = msg["roomName"];
+   this.chatService.add(uid , roomName);
+    next(null , {"success":true});
 }

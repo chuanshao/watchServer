@@ -3,13 +3,14 @@
  */
 var Code = require('../../../shared/code');
 var utils = require('../util/utils');
-module.exports = ChatService;
+var dispatcher = require('../util/dispatcher');
+var Event = require('../consts/consts').Event;
 var ChatService = function(app){
     this.app = app;
     this.uidMap = {};
     this.channelMap = {};
 }
-
+module.exports = ChatService;
 ChatService.prototype.add = function (uid , channelName) {
     var sid = getSidByUid(uid, this.app);
     if(!sid){
