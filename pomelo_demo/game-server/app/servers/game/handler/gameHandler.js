@@ -22,7 +22,7 @@ function setContent(str) {
 }
 GameHandler.prototype.createGame = function (msg , session , next) {
     var uid = session.uid;
-    var roomName = "100000";
+    var roomName = msg.roomName;
     async.parallel(
         [function (callback) {
             app.rpc.chat.chatRemote.add(uid, roomName, function(err , res){

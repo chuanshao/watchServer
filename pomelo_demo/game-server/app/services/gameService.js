@@ -13,14 +13,17 @@ var Handler = function(app)
 }
 var pro = Handler.prototype;
 
-pro.getGame = function(id){
+pro.getGame = function(gameId){
     return this.games[id];
 }
-pro.createGame = function(id , setting){
-    if(this.games[id]){
-        return this.games[id];
+pro.createGame = function(gameId , setting){
+    if(this.games[gameId]){
+        return this.games[gameId];
     }
     var game = new Game(setting , this);
     this.games[id] = game;
     return game;
+}
+pro.addGame = function(gameId , uid , cb){
+
 }
