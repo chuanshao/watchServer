@@ -3,29 +3,63 @@
  */
 var Code = require('../../../../shared/code');
 var PlayRule = require('./playRule');
-var cardGame = function(gameParam)
+var Player = require('./player');
+module.exports = function(gameParam)
 {
     return new Handler(gameParam);
 }
 var Handler = function(gameParam)
 {
-    this.currentPlayer = gameParam.banker;//当前应该出牌的玩家
+    this.posWithPlayer = {};
+    this.currentPlayer = null;//当前应该出牌的玩家
     this.lastSendPlayer = null;//最后出牌的玩家
     this.playIndex = 0;
-    this.banker = gameParam.banker; //庄家
-    this.score = gameParam.score;//分数
+    this.banker = null; //庄家
+    this.score = 0;//分数
     this.playerNum = gameParam.playerNum;
-    this.players = gameParam.players;
+    this.players = {};
     this.playRule = new PlayRule();
-    this.currentScore = 0; //当前分数
+    this.currentScore = gameParam.maxScore; //当前分数,默认最多
+    this.giveUpSetScoreNum = 0; //放弃叫分玩家数量
+    this.currentSetScorePlayer = null;//当前叫分玩家
+    this._init(gameParam.posWithPlayer);
 }
+
+var pro = Handler.prototype;
 /**
  *是否能提前结束
  */
 pro.cutShortGame = function(){
     return false;
 }
-var pro = Handler.prototype;
+/**
+ * 叫分
+ * @param uid
+ * @param score
+ * @param cb
+ */
+pro.setScore = function(uid, score , cb){
+    if(score <= this.currentScore || score % 5 != 0 || score < 0){
+        cb(Code.GAME.SET_SCORE_ERROR , null);
+        return;
+    }
+    this.score = score;
+    this.currentSetScorePlayer = this._getPlayerPos(uid);
+    if(score == 0){
+        this._startGame(score , cb);
+    }
+}
+/**
+ * 放弃叫分
+ * @param uid
+ * @param cb
+ */
+pro.giveUpSetScore = function(uid , cb){
+    this.giveUpSetScoreNum ++;
+    if(this._setScoreIsOver()){
+        this._startGame(cb);
+    }
+}
 ///玩家出
 pro.playPoke = function(uid , pokes , cb)
 {
@@ -47,6 +81,27 @@ pro.playPoke = function(uid , pokes , cb)
     }else{
         cb(Code.GAME.SEND_POKE_Fail , null);
     }
+}
+/**
+ * 开始游戏
+ */
+pro._startGame = function(cb){
+    this._initBankAndFirstSend();
+    this._dealingCard(cb);//发牌
+}
+pro._init = function(pwp){
+    for(var i = 0 ; i < this.playerNum ; i++){
+        var uid = pwp[i];
+        var player = new Player(uid , i);
+        this.posWithPlayer[i] = player;
+    }
+}
+pro._setScoreIsOver = function(){
+    return this.playerNum - this.giveUpSetScoreNum == 1;
+}
+pro._initBankAndFirstSend = function () {
+    this.banker = this.currentSetScorePlayer;
+    this.currentPlayer = this.currentSetScorePlayer;
 }
 /**
  * 统计结果
@@ -83,6 +138,7 @@ pro._scoreIndicator = function()
         this.currentPlayer = this.currentPlayer.getNextPlayer();
     }
 }
+
 /**
  * 获取这一圈的分数
  * @param players
@@ -117,6 +173,45 @@ pro._isOver = function(players)
     return true;
 }
 /**
+ * 发牌
+ * @private
+ */
+pro._dealingCard = function(cb){
+    ass.getConfig("tspoke/withoutTT.json" ,function (err , jsonData) {
+        var self = this;
+        var readyArr = pro._washCard(jsonData , 0 , 3);//
+        var eachPlayerHas = Math.floor(readyArr / self.playerNum);
+        for(var i = 0 ; i < self.playerNum ; i++){
+            var player = self.players[i];
+            player.setPokes(readyArr.splice(eachPlayerHas * i , eachPlayerHas * i+1));
+        }
+        cb(null , null);
+    });
+}
+/**
+ *
+ * @param cardArr
+ * @param index 当前次数
+ * @param total 总次数
+ * @private
+ */
+pro._washCard = function(cardArr , index , total){
+    var nextIndex = index + 1;
+    var returnArr = [];
+    for(var i = 0 ; i < 50 ; i++){
+        var index1 = Math.floor(Math.random() * cardArr.length);
+        var index2 = Math.floor(Math.random() * cardArr.length);
+        var switchNum = returnArr[index1];
+        returnArr[index1] = returnArr[index2];
+        returnArr[index2] = switchNum;
+    }
+    if(nextIndex == total){
+        return pro._washCard(cardArr , nextIndex , total);
+    }else{
+        return returnArr;
+    }
+}
+/**
  * 获取正在玩的玩家
  * @param uid
  * @returns {*}
@@ -124,9 +219,9 @@ pro._isOver = function(players)
  */
 pro._getPlayer = function(uid)
 {
-    for(var i = 0 ; i < this.players.length ; i ++)
+    for(var i = 0 ; i < this.playerNum ; i ++)
     {
-        var player = this.players[i];
+        var player = this.posWithPlayer[i];
         if(player.id == uid)
         {
             return player;

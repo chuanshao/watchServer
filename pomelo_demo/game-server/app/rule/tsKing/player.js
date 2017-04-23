@@ -1,13 +1,14 @@
 /**
  * Created by DELL on 2017/4/7.
  */
-var Player = function(uid)
+var Player = function(uid , currentPos)
 {
     this.userId = uid;
     this.totalPokes = [];
     this.playedPokes = [];
     this.nextPlayer = null;
     this.isReady = false;
+    this.currentPos= currentPos;
 }
 var pro = Player.prototype;
 pro.getLastPlayed = function()

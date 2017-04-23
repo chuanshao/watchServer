@@ -42,7 +42,20 @@ GameHandler.prototype.createGame = function (msg , session , next) {
         }
     });
 }
-
+GameHandler.prototype.ready = function (msg ,session , next) {
+    var gameId = msg.gameId;
+    var uid = session.uid;
+    var game = this.gameSevice.getGame(gameId);
+    if(!game){
+        next({
+            code: Code.GAME.BE_READY_ERROR
+        }, null);
+        return ;
+    }
+    game.playerReady(uid , function (err , res) {
+        next(err , res);
+    });
+}
 GameHandler.prototype.sendPokes = function(msg , session , next){
     var uid = session.uid;
     var roomName = "10000";

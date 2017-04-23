@@ -41,7 +41,7 @@ handler.queryEntry = function(msg, session, next) {
         return;
     }
     // select connector
-    var res = dispatcher.dispatch(uid, connectors);
+    var res = dispatcher.dispatch("" + uid, connectors);
     next(null, {
         code: Code.OK,
         host: res.host,

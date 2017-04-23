@@ -25,7 +25,8 @@ module.exports = {
         NO_THIS_POS:4004,
         POS_HAS_PLAYER:4005,
         ROOM_IS_NOT_EXIT:4006,
-        BE_READY_ERROR:4007
+        BE_READY_ERROR:4007,
+        SET_SCORE_ERROR:4008
     },
     Chat:{
         FA_UNKNOW_CONNECTOR:6001,

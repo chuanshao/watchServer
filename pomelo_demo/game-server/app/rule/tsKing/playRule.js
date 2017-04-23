@@ -2,7 +2,7 @@
  * Created by DELL on 2017/4/6.
  */
 
-var PlayRule = function(setting)
+module.exports = function(setting)
 {
     return new Handler(setting);
 }

@@ -1,14 +1,17 @@
 /**
  * Created by DELL on 2017/4/7.
+ * 牌局
  */
 var Code = require('../../../../shared/code');
 var Player = require('./player');
 var ass = require('../../util/ass');
-module.exports = function(setting)
+var Game = require('./cardGame');
+module.exports = function(setting , service)
 {
-    return new Handler(setting);
+    return new Handler(setting , service);
 }
-var Handler = function(setting){
+var Handler = function(setting , service){
+    this.__gameService__ = service;
     this.currentIndex = 0;//当前进行到第几局
     this.isStarted = false;//是否开始   开始就不能结束了
     this.currentCardGame = null;
@@ -19,11 +22,18 @@ var Handler = function(setting){
 }
 var pro = Handler.prototype;
 /**
- * 进入房间
+ * 获取当前的游戏
+ * @returns {null|Game}
+ */
+pro.getCurrentGame = function(){
+    return this.currentCardGame;
+}
+/**
+ * 加入游戏
  * @param uid
  * @param pos
  */
-pro.playerEnterRoom = function(uid  , cb){
+pro.add = function(uid  , cb){
     var player = this._getPlayer(uid);
     var self = this;
     var returnData = {};
@@ -104,7 +114,6 @@ pro.changePos = function(uid , pos , cb){
     this.posWithPlayer[pos] =player;
     cb(null , {"isSuccess" : true});
 }
-
 /**
  * 玩家已经准备
  * @param uid
@@ -126,12 +135,10 @@ pro.playerReady = function(uid , cb){
     var cbData = {};
     cbData["readyResult"] = true;
     if(self._isAllReady()){ //所有玩家都已经准备就绪
-        cbData["isStart"] = true;
-        cbData["playersInfo"] = self._getClientNeedData();
         this.isStarted = true;
-        this._dealingCard(function(err , res){
-            cb(null , cbData);
-        });
+        var parmas = {"players" : self.posWithPlayer , "playNum":self.playerNum};
+        this.currentCardGame = new Game(parmas);
+        this.currentCardGame.startGame();
     }else{
         cbData["isStart"] = false;
         cb(null , cbData);
@@ -179,45 +186,6 @@ pro._getEmptyPos = function(){
     }
     return -1;
 }
-/**
- * 发
- * @private
- */
-pro._dealingCard = function(cb){
-    ass.getConfig("tspoke/withoutTT.json" ,function (err , jsonData) {
-        var self = this;
-        var readyArr = pro._washCard(jsonData , 0 , 3);//
-        var eachPlayerHas = Math.floor(readyArr / self.playerNum);
-        for(var i = 0 ; i < self.playerNum ; i++){
-            var player = self.posWithPlayer[i];
-            player.setPokes(readyArr.splice(eachPlayerHas * i , eachPlayerHas * i+1));
-        }
-        cb(null , null);
-    });
-}
-/**
- *
- * @param cardArr
- * @param index 当前次数
- * @param total 总次数
- * @private
- */
-pro._washCard = function(cardArr , index , total){
-    var nextIndex = index + 1;
-    var returnArr = [];
-    for(var i = 0 ; i < 50 ; i++){
-        var index1 = Math.floor(Math.random() * cardArr.length);
-        var index2 = Math.floor(Math.random() * cardArr.length);
-        var switchNum = returnArr[index1];
-        returnArr[index1] = returnArr[index2];
-        returnArr[index2] = switchNum;
-    }
-    if(nextIndex == total){
-        return pro._washCard(cardArr , nextIndex , total);
-    }else{
-        return returnArr;
-    }
-}
 pro._getPlayer = function(uid){
     for(var player in this.posWithPlayer){
         if(player != null && player.userId == uid){
@@ -249,3 +217,4 @@ pro._isAllReady = function(){
     }
     return true;
 }
+
