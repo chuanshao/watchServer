@@ -3,6 +3,7 @@
  */
 module.exports = {
     Event:{
-        chat:'onChat'
+        chat:'onChat',
+        dealingCardOver:'dealingCardOver'
     }
 }

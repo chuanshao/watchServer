@@ -6,6 +6,8 @@ var Code = require('../../../../shared/code');
 var Player = require('./player');
 var ass = require('../../util/ass');
 var Game = require('./cardGame');
+var Event = require('../../consts/consts').Event;
+var messageService = require('../../domain/messageService');
 module.exports = function(setting , service)
 {
     return new Handler(setting , service);
@@ -137,8 +139,7 @@ pro.playerReady = function(uid , cb){
     if(self._isAllReady()){ //所有玩家都已经准备就绪
         this.isStarted = true;
         var parmas = {"players" : self.posWithPlayer , "playNum":self.playerNum};
-        this.currentCardGame = new Game(parmas);
-        this.currentCardGame.startGame();
+        this._initCardGame(parmas);
     }else{
         cbData["isStart"] = false;
         cb(null , cbData);
@@ -160,6 +161,21 @@ pro.sendPokes = function (uid , pokes , cb) {
         cb(code , res);
     });
 }
+pro._initCardGame = function(parmas){
+    this.currentCardGame = new Game(parmas);
+    var self = this;
+    this.currentCardGame.on('dealingCardOver' , function(res){//fapai
+        for(var uid in  res){
+            messageService.pushMessageToPlayer(uid ,Event.dealingCardOver,res);
+        }
+    });
+    this.currentCardGame.on('gameOver' , function(res){//
+        self._singleCardGameOver(res);
+    });//this game is over return result
+}
+pro._singleCardGameOver = function(res){//单局结束
+
+}
 pro._getPlayerPos = function(uid){
     for(var i = 0 ; i < this.playerNum ; i ++){
         var player = this.posWithPlayer[i];
@@ -169,6 +185,7 @@ pro._getPlayerPos = function(uid){
     }
     return -1;
 }
+
 pro._linkPlayer = function()
 {
     var i = 0;

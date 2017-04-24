@@ -4,25 +4,30 @@
 var Code = require('../../../../shared/code');
 var PlayRule = require('./playRule');
 var Player = require('./player');
-module.exports = function(gameParam)
-{
-    return new Handler(gameParam);
-}
+var EventEmitter = require('events').EventEmitter;
+var util = require('util');
 var Handler = function(gameParam)
 {
-    this.posWithPlayer = {};
+    EventEmitter.call(this);
+    this.posWithPlayer = [];
     this.currentPlayer = null;//当前应该出牌的玩家
     this.lastSendPlayer = null;//最后出牌的玩家
     this.playIndex = 0;
     this.banker = null; //庄家
     this.score = 0;//分数
     this.playerNum = gameParam.playerNum;
-    this.players = {};
     this.playRule = new PlayRule();
     this.currentScore = gameParam.maxScore; //当前分数,默认最多
     this.giveUpSetScoreNum = 0; //放弃叫分玩家数量
     this.currentSetScorePlayer = null;//当前叫分玩家
+    this.pukeConfig = gameParam.pukeConfig;
     this._init(gameParam.posWithPlayer);
+    this._dealingCard();//发牌
+}
+util.inherits(Handler, EventEmitter);
+module.exports = function(gameParam)
+{
+    return new Handler(gameParam);
 }
 
 var pro = Handler.prototype;
@@ -46,7 +51,7 @@ pro.setScore = function(uid, score , cb){
     this.score = score;
     this.currentSetScorePlayer = this._getPlayerPos(uid);
     if(score == 0){
-        this._startGame(score , cb);
+        this._setScoreOver(cb);
     }
 }
 /**
@@ -57,7 +62,7 @@ pro.setScore = function(uid, score , cb){
 pro.giveUpSetScore = function(uid , cb){
     this.giveUpSetScoreNum ++;
     if(this._setScoreIsOver()){
-        this._startGame(cb);
+        this._setScoreOver(cb);
     }
 }
 ///玩家出
@@ -85,15 +90,14 @@ pro.playPoke = function(uid , pokes , cb)
 /**
  * 开始游戏
  */
-pro._startGame = function(cb){
-    this._initBankAndFirstSend();
-    this._dealingCard(cb);//发牌
+pro._setScoreOver = function(cb){
+    this._initBankAndFirstSend();//定庄家
 }
 pro._init = function(pwp){
     for(var i = 0 ; i < this.playerNum ; i++){
         var uid = pwp[i];
         var player = new Player(uid , i);
-        this.posWithPlayer[i] = player;
+        this.posWithPlayer.push(player);
     }
 }
 pro._setScoreIsOver = function(){
@@ -110,7 +114,7 @@ pro._initBankAndFirstSend = function () {
 pro._statisticalResults = function()
 {
     var returnValue = {};
-    var isOver = this._isOver(this.players);
+    var isOver = this._isOver(this.posWithPlayer);
     returnValue.currentScore = this.currentScore;
     returnValue.isOver = isOver;
     return returnValue;
@@ -123,13 +127,13 @@ pro._scoreIndicator = function()
 {
     if(this.playIndex != 0 && this.playIndex % this.playerNum == 0)//一圈打完  判断谁最大
     {
-        var bigPlayer = this.playRule.judgeWithOneIsBig(this.players);
+        var bigPlayer = this.playRule.judgeWithOneIsBig(this.posWithPlayer);
         if(bigPlayer.id == this.banker.id)//庄家最大
         {
             return;
         }else//闲家最大,计分
         {
-            this.currentScore += this._getPlayCircleScore(this.players);
+            this.currentScore += this._getPlayCircleScore(this.posWithPlayer);
         }
         this.currentPlayer = bigPlayer;
         this.lastSendPlayer = null;
@@ -176,17 +180,24 @@ pro._isOver = function(players)
  * 发牌
  * @private
  */
-pro._dealingCard = function(cb){
-    ass.getConfig("tspoke/withoutTT.json" ,function (err , jsonData) {
-        var self = this;
-        var readyArr = pro._washCard(jsonData , 0 , 3);//
-        var eachPlayerHas = Math.floor(readyArr / self.playerNum);
-        for(var i = 0 ; i < self.playerNum ; i++){
-            var player = self.players[i];
-            player.setPokes(readyArr.splice(eachPlayerHas * i , eachPlayerHas * i+1));
-        }
-        cb(null , null);
-    });
+pro._dealingCard = function(){
+    var self = this;
+    var readyArr = pro._washCard(self.pukeConfig , 0 , 3);//
+    var eachPlayerHas = Math.floor(readyArr / self.playerNum);
+    for(var i = 0 ; i < self.playerNum ; i++){
+        var player = self.posWithPlayer[i];
+        player.setPokes(readyArr.splice(eachPlayerHas * i , eachPlayerHas * i+1));
+    }
+    this.emit('dealingCardOver' , this._getDealingCardData());
+}
+pro._getDealingCardData = function(){
+    var returnData = {};
+    for(var i = 0 ; i < self.playerNum ; i++){
+        var player = self.posWithPlayer[i];
+        var uid = player.userId;
+        returnData[uid] = player.getTotalPokes();
+    }
+    return returnData;
 }
 /**
  *
