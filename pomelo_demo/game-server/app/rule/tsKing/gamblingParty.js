@@ -90,6 +90,9 @@ pro.getPlayerPosData = function(){
     }
     return returnValue;
 }
+pro.destroy = function(gameId){
+    this.__gameService__.destroy(gameId);
+}
 /**
  * 改变位置
  * @param uid
@@ -138,7 +141,7 @@ pro.playerReady = function(uid , cb){
     cbData["readyResult"] = true;
     if(self._isAllReady()){ //所有玩家都已经准备就绪
         this.isStarted = true;
-        var parmas = {"players" : self.posWithPlayer , "playNum":self.playerNum};
+        var parmas = {"players" : self.posWithPlayer , "playNum":self.playerNum , "pukeConfig":ass.getConfig('withoutTT')};
         this._initCardGame(parmas);
     }else{
         cbData["isStart"] = false;
@@ -164,9 +167,16 @@ pro.sendPokes = function (uid , pokes , cb) {
 pro._initCardGame = function(parmas){
     this.currentCardGame = new Game(parmas);
     var self = this;
-    this.currentCardGame.on('dealingCardOver' , function(res){//fapai
-        for(var uid in  res){
+    this.currentCardGame.on(Event.dealingCardOver , function(res){//fapai
+        for(var pos in  self.posWithPlayer){
+            var uid = self.posWithPlayer[pos];
             messageService.pushMessageToPlayer(uid ,Event.dealingCardOver,res);
+        }
+    });
+    this.currentCardGame.on(Event.TSW.onGameScoreChange , function(res){//fapai
+        for(var pos in  self.posWithPlayer){
+            var uid = self.posWithPlayer[pos];
+            messageService.pushMessageToPlayer(uid ,Event.TSW.onGameScoreChange ,res);
         }
     });
     this.currentCardGame.on('gameOver' , function(res){//

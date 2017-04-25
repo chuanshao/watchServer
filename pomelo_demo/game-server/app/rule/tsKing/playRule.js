@@ -2,13 +2,13 @@
  * Created by DELL on 2017/4/6.
  */
 
-module.exports = function(setting)
+module.exports = function()
 {
-    return new Handler(setting);
+    return new Handler();
 }
-var Handler = function(setting)
+var Handler = function()
 {
-    this.trackTurn = setting.trackTurn;//拖拉机是否带拐弯
+    // /this.trackTurn = setting.trackTurn;//拖拉机是否带拐弯
 }
 
 var pro = Handler.prototype;
@@ -46,4 +46,3 @@ pro.judgeWithOneIsBig = function(players)
 var comparePokes = function (pokes1 , pokes2) {
     return true;
 }
-module.exports = PlayRule;

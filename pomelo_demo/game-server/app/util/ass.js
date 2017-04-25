@@ -4,24 +4,32 @@
 var fs = require('fs');
 var ass = {}
 var configs = {};
-exports.getConfig = function (path , callback) {
-    var realPath = "./pomelo_demo/game-server/config/" + path;
-    if(configs[path]){
-        callback(configs[path]);
-        return;
+var configFiles = [];
+exports.getConfig = function (configName) {
+    if(!configs || !configs[configName]){
+        configs = _loadConfig();
     }
-    _loadConfig(realPath , callback);
+    return configs[configName];
 }
+function _loadConfig (){
+    var path = "../../config/tspoke/";
+    var data = {};
+    if (configFiles.length === 0) {
+        var dir = './config/tspoke';
+        var name, reg = /\.json$/;
+        fs.readdirSync(dir).forEach(function(file) {
+            if (reg.test(file)) {
+                name = file.replace(reg, '');
+                configFiles.push(name);
+                data[name] = require(path + file);
+            }
+        });
+    } else {
+        configFiles.forEach(function(name) {
+            data[name] = require(path + name + '.json');
+        });
+    }
 
-function _loadConfig (path , callBack){
-    fs.readFile(path , 'utf8', function (err , data) {
-        try{
-            var jsonData = JSON.parse(data);
-            configs[path] = jsonData;
-            callBack(null , jsonData);
-        }catch (e){
-            callBack(err , null);
-        }
-    });
+    return data;
 }
 exports.ass = ass;

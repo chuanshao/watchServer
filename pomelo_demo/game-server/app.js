@@ -2,6 +2,7 @@ var pomelo = require('pomelo');
 var routeUtil = require('./app/util/routeUtils');
 var RoomService = require('./app/util/roomService');
 var ChatService = require('./app/services/chatService');
+var GameService = require('./app/services/gameService');
 /**
  * Init app for client.
  */
@@ -47,11 +48,11 @@ app.configure('production|development', 'gate', function(){
             }
         });
 });
-// app.configure('production|development', 'connector', function() {
-//     app.set('roomService', new RoomService(app));
-// });
 app.configure('production|development', 'chat', function() {
     app.set('chatService', new ChatService(app));
+});
+app.configure('production|development', 'game', function() {
+    app.set('chatService', new GameService(app));
 });
 // start app
 app.start();
@@ -59,24 +60,3 @@ app.start();
 process.on('uncaughtException', function (err) {
   console.error(' Caught exception: ' + err.stack);
 });
-// var ass = require('./app/util/ass');
-// ass.getConfig("tspoke/withoutTT.json" ,function (err , jsonData) {
-//     var a = test(jsonData , 0 , 3);
-//     console.log(a);
-// });
-// function test(cardArr , index , total){
-//     var nextIndex = index + 1;
-//     var returnArr = cardArr;
-//     for(var i = 0 ; i < 50 ; i++){
-//         var index1 = Math.floor(Math.random() * cardArr.length);
-//         var index2 = Math.floor(Math.random() * cardArr.length);
-//         var switchNum = returnArr[index1];
-//         returnArr[index1] = returnArr[index2];
-//         returnArr[index2] = switchNum;
-//     }
-//     if(nextIndex == total){
-//         return pro._washCard(cardArr , nextIndex , total);
-//     }else{
-//         return returnArr;
-//     }
-// }

@@ -6,6 +6,7 @@ var PlayRule = require('./playRule');
 var Player = require('./player');
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
+var Event = require('../../consts/consts').Event;
 var Handler = function(gameParam)
 {
     EventEmitter.call(this);
@@ -14,10 +15,10 @@ var Handler = function(gameParam)
     this.lastSendPlayer = null;//最后出牌的玩家
     this.playIndex = 0;
     this.banker = null; //庄家
-    this.score = 0;//分数
+    this.maxScore = 90;//最大分数
     this.playerNum = gameParam.playerNum;
     this.playRule = new PlayRule();
-    this.currentScore = gameParam.maxScore; //当前分数,默认最多
+    this.currentScore = 0; //当前分数,默认最多
     this.giveUpSetScoreNum = 0; //放弃叫分玩家数量
     this.currentSetScorePlayer = null;//当前叫分玩家
     this.pukeConfig = gameParam.pukeConfig;
@@ -44,7 +45,7 @@ pro.cutShortGame = function(){
  * @param cb
  */
 pro.setScore = function(uid, score , cb){
-    if(score <= this.currentScore || score % 5 != 0 || score < 0){
+    if(score <= this.currentScore || score % 5 != 0 || score < 0||score > this.maxScore){
         cb(Code.GAME.SET_SCORE_ERROR , null);
         return;
     }
@@ -81,15 +82,14 @@ pro.playPoke = function(uid , pokes , cb)
     player.add(pokes);
     if(self.playRule.authPlayedPoke(this.currentPlayer , this.lastSendPlayer)) {
         self._scoreIndicator();//算分
-        var returnValue = self._statisticalResults();//计算结果
-        cb(null,returnValue);
+        if(self._isOver()){
+            this.emit(Event.singleGameOver , null);
+        }
+        cb(null,{"success":true});
     }else{
         cb(Code.GAME.SEND_POKE_Fail , null);
     }
 }
-/**
- * 开始游戏
- */
 pro._setScoreOver = function(cb){
     this._initBankAndFirstSend();//定庄家
 }
@@ -133,7 +133,9 @@ pro._scoreIndicator = function()
             return;
         }else//闲家最大,计分
         {
-            this.currentScore += this._getPlayCircleScore(this.posWithPlayer);
+            var thisCircleScore = this._getPlayCircleScore(this.posWithPlayer);
+            this.currentScore += thisCircleScore;
+            this.emit(Event.TSW.onGameScoreChange , {"addScore":thisCircleScore , "totalScore":this.currentScore}); //分数改变
         }
         this.currentPlayer = bigPlayer;
         this.lastSendPlayer = null;
@@ -165,12 +167,12 @@ pro._getPlayCircleScore = function(players)
  * @param players
  * @private
  */
-pro._isOver = function(players)
+pro._isOver = function()
 {
     var totalScore = 0;
-    for(var i = 0 ; i < players.length ; i++){
-        var player = players[i];
-        if(!player.isEmpty()){
+    for(var i = 0 ; i < this.posWithPlayer.length ; i++){
+        var player = this.posWithPlayer[i];
+        if(!player.pokeIsEmpty()){
             return false;
         }
     }
@@ -188,7 +190,7 @@ pro._dealingCard = function(){
         var player = self.posWithPlayer[i];
         player.setPokes(readyArr.splice(eachPlayerHas * i , eachPlayerHas * i+1));
     }
-    this.emit('dealingCardOver' , this._getDealingCardData());
+    this.emit(Event.dealingCardOver , this._getDealingCardData());
 }
 pro._getDealingCardData = function(){
     var returnData = {};
@@ -239,6 +241,21 @@ pro._getPlayer = function(uid)
         }
     }
     return null;
+}
+
+pro.getCurrentStatus = function(uid){
+    var returnData ={};
+    for(var i = 0 ; i < this.playerNum ; i ++)
+    {
+        var player = this.posWithPlayer[i];
+        if(player.id == uid)
+        {
+            returnData[uid] = {"sendPoke" : player.getPlayedPokes() , "totalPoke" : player.getTotalPokes()};
+        }
+        returnData[uid] = {"sendPoke" : player.getPlayedPokes()};
+    }
+    returnData["score"] = this.currentScore;
+    return returnData;
 }
 
 

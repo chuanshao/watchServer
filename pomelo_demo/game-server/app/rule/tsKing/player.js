@@ -31,6 +31,9 @@ pro.getNextPlayer = function()
 {
     return this.nextPlayer;
 }
+pro.pokeIsEmpty = function(){
+    return this.totalPokes.length == 0 ? true : false;
+}
 pro.getPlayedPokes = function(){
     return this.playedPokes;
 }

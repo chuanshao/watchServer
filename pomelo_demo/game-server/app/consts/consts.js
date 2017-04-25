@@ -4,6 +4,10 @@
 module.exports = {
     Event:{
         chat:'onChat',
-        dealingCardOver:'dealingCardOver'
+        dealingCardOver:'dealingCardOver',
+        singleGameOver:"singleGameOver",
+        TSW:{
+            onGameScoreChange:"tswGameScore"
+        }
     }
 }
