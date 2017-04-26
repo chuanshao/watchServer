@@ -8,37 +8,35 @@ var Code = require('../../../../../shared/code');
 var async = require('async');
 var messageService = require('../../../domain/messageService');
 module.exports = function(app) {
-    return new GameHandler(app, app.get('gameSevice'));
+    return new GameHandler(app, app.get('gameService'));
 };
 
-var GameHandler = function(app, gameSevice) {
+var GameHandler = function(app, gameService) {
     this.app = app;
-    this.gameSevice = gameSevice;
+    this.gameSevice = gameService;
 };
-function setContent(str) {
-    str = str.replace(/<\/?[^>]*>/g,'');
-    str = str.replace(/[ | ]*\n/g,'\n');
-    return str.replace(/\n[\s| | ]*\r/g,'\n');
-}
 GameHandler.prototype.createGame = function (msg , session , next) {
     var uid = session.uid;
-    var roomName = msg.roomName;
+    var roomName = 100000;
+    var self = this;
     async.parallel([
         function (callback) {
-            app.rpc.chat.chatRemote.add(uid, roomName, function(err , res){
-                callback(err , res);
+            self.app.rpc.chat.chatRemote.add(null, uid, roomName, function(err , res){
+                callback(null , res);
             });
          },
         function (callback) {
-            this.gameSevice.createGame(uid, roomName, function(err , res){
+             var setting = {"playerNum":2};
+            self.gameSevice.createGame(roomName, setting);
+            self.gameSevice.addGame(roomName , uid, function (err , res) {
                 callback(err , res);
             });
         }
     ],function (err , res) {
         if(err){
-            next(err , null);
+            next(null , {"code":err});
         }else{
-            next(null , res);
+            next(null , {"success":""});
         }
     });
 }

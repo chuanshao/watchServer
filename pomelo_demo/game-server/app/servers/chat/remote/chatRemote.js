@@ -1,6 +1,7 @@
 /**
  * Created by DELL on 2017/4/18.
  */
+var utils = require('../../../util/utils');
 module.exports = function(app) {
     return new ChatRemote(app, app.get('chatService'));
 };
@@ -14,8 +15,9 @@ var ChatRemote = function(app, chatService) {
  *	Add player into channel
  */
 ChatRemote.prototype.add = function(uid, channelName, cb) {
-    var code = this.chatService.add(uid, channelName, channelName);
-    cb(null, code);
+    console.log(uid);
+    var code = this.chatService.add(uid, channelName);
+    utils.invokeCallback(cb);
 };
 
 /**

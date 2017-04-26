@@ -25,13 +25,14 @@ pro.createGame = function(gameId , setting){
         return this.games[gameId];
     }
     var game = new Game(setting , this);
-    this.games[id] = game;
+    this.games[gameId] = game;
     return game;
 }
 pro.addGame = function(gameId , uid , cb){
     var game = this.games[gameId];
     if(!game){
-        cb(Code.GAME.ROOM_IS_NOT_EXIT);
+        console.log(123);
+        cb(Code.GAME.ROOM_IS_NOT_EXIT , null);
         return;
     }
     game.add(uid , cb);

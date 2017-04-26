@@ -52,7 +52,7 @@ app.configure('production|development', 'chat', function() {
     app.set('chatService', new ChatService(app));
 });
 app.configure('production|development', 'game', function() {
-    app.set('chatService', new GameService(app));
+    app.set('gameService', new GameService(app));
 });
 // start app
 app.start();

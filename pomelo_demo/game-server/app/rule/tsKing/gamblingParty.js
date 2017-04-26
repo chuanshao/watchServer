@@ -39,7 +39,6 @@ pro.add = function(uid  , cb){
     var player = this._getPlayer(uid);
     var self = this;
     var returnData = {};
-    returnData["isStarted"] = this.isStarted;
     if(this.isStarted){
         if(player){//玩家重新进入房间,返回玩家所需要的所有信息
             cb(null , returnData);
