@@ -1,13 +1,13 @@
 /**
  * Created by DELL on 2017/4/7.
- * 牌局
+ * 牌局,数据处理中心
  */
 var Code = require('../../../../shared/code');
-var Player = require('./player');
 var ass = require('../../util/ass');
 var Game = require('./cardGame');
 var Event = require('../../consts/consts').Event;
 var messageService = require('../../domain/messageService');
+var utils = require('../../util/utils');
 module.exports = function(setting , service)
 {
     return new Handler(setting , service);
@@ -19,8 +19,8 @@ var Handler = function(setting , service){
     this.currentCardGame = null;
     this.playerNum =setting.playerNum;
     this.setting = setting;
-    this.readyNum = 0;
-    this.posWithPlayer = {};
+    this.readyPlayer = {};//已经准备的玩家
+    this.posWithPlayer = new Array(this.playerNum);
 }
 var pro = Handler.prototype;
 /**
@@ -39,43 +39,27 @@ pro.add = function(uid  , cb){
     var player = this._getPlayer(uid);
     var self = this;
     var returnData = {};
-    if(this.isStarted){
+    if(self.isStarted){
         if(player){//玩家重新进入房间,返回玩家所需要的所有信息
-            cb(null , returnData);
+            cb(null , self._getPlayerAndPos());
+            self._pushMessageToOther(uid , Event.playerEnter , {"userId" : uid , "pos" : self._getPlayerPos(uid)});
         }else{
             cb(Code.GAME.ROOM_IS_NOT_EXIT , null); //房间不存在
         }
     }else{
         if(!player){
-            var emptyPos = this._getEmptyPos();
+            var emptyPos = self._getEmptyPos();
             if(emptyPos == -1){//没有空位置
                 cb(Code.GAME.ROOM_IS_NOT_EXIT , null); //房间不存在
                 return;
             }
-            player = new Player(uid);
-            this.posWithPlayer[emptyPos] = player;
-            cb(null , returnData);
+            self.posWithPlayer[emptyPos] = uid;
+            self._pushMessageToOther(uid , Event.playerEnter , {"userId" : uid , "pos" : emptyPos});
+            cb(null , self._getPlayerAndPos());
         }else{//重新进入  但是没有开始返回现在的状态
-            cb(null , returnData);
+            cb(null , self._getPlayerAndPos());
         }
     }
-}
-pro.getPlayerPokeAnPosData = function(uid){
-    var returnValue = [];
-    for(var i = 0 ; i < this.playerNum ; i++){
-        var player = this.posWithPlayer[i];
-        if(player){
-            var item = {};
-            item["userId"] = player.userId;
-            item["pos"] = i;
-            item["playedPokes"] = player.getPlayedPokes();
-            if(player.userId == uid){
-                item["totalPokes"] = player.getTotalPokes();
-            }
-            returnValue.push(item);
-        }
-    }
-    return returnValue;
 }
 pro.getPlayerPosData = function(){
     var returnValue = [];
@@ -93,59 +77,27 @@ pro.destroy = function(gameId){
     this.__gameService__.destroy(gameId);
 }
 /**
- * 改变位置
- * @param uid
- * @param pos
- */
-pro.changePos = function(uid , pos , cb){
-    if(this.isStarted) {
-        cb(Code.GAME.GAME_IS_START, null);
-        return;
-    }
-    if(pos > this.playerNum){//没有这个位置
-        cb(Code.GAME.NO_THIS_POS , null);
-        return;
-    }
-    if(this.posWithPlayer[pos]){//这个位置已经有人了
-        cb(Code.GAME.POS_HAS_PLAYER , null);
-        return;
-    }
-    var currentPos = this._getPlayerPos(uid);
-    var player = this._getPlayer(uid);
-    if(currentPos != -1){
-        this.posWithPlayer[currentPos] =null;
-    }
-    this.posWithPlayer[pos] =player;
-    cb(null , {"isSuccess" : true});
-}
-/**
  * 玩家已经准备
  * @param uid
  * @param cb  是否开始
  */
-pro.playerReady = function(uid , cb){
+pro.playerReady = function(uid , cb){//准备游戏  向其他玩家推送准备消息
     var self = this;
-    if(this.isStarted) {
+    if(this.currentCardGame) {//游戏已经开始  不允许准备
         cb(Code.GAME.GAME_IS_START , null);
         return;
     }
-    var player = this._getPlayer(uid)
-    if(!player && !player.isReady){
-        player.isReady = true;
-    }else{
-        cb(Code.GAME.BE_READY_ERROR , null);
+    if(!this._playerIsInGame(uid)){//该玩家不在房间内
+        cb(Code.GAME.PLAYER_NOT_EXIT , null);
         return;
     }
-    var cbData = {};
-    cbData["readyResult"] = true;
+    this._playerReady(uid);
     if(self._isAllReady()){ //所有玩家都已经准备就绪
-        this.isStarted = true;
         var parmas = {"players" : self.posWithPlayer , "playNum":self.playerNum , "pukeConfig":ass.getConfig('withoutTT')};
         this._initCardGame(parmas);
-    }else{
-        cbData["isStart"] = false;
-        cb(null , cbData);
     }
+    cb(null , {"readyResult":true});
+    self._pushMessageToOther(uid , Event.playerReady , {"uid":uid});
 }
 /**
  * 玩家离开
@@ -153,10 +105,13 @@ pro.playerReady = function(uid , cb){
  * @param cb
  */
 pro.playerLeave = function(uid){
-    var pos = this._getPlayerPos(uid);
-    if(pos != -1){
-        this.posWithPlayer[pos] = null;
+    if(this.isStarted){//游戏开始提示玩家掉线
+        return;
     }
+    this._playerCancel(uid);//如果该玩家准备了的 取消准备
+    this._deletePlayer(uid);//删除该玩家
+    //提示玩家离开
+
 }
 pro.sendPokes = function (uid , pokes , cb) {
     this.currentCardGame.playPoke(uid , pokes , function(code , res){
@@ -182,13 +137,22 @@ pro._initCardGame = function(parmas){
         self._singleCardGameOver(res);
     });//this game is over return result
 }
+pro._pushMessageToOther = function (uid , route , msg) {
+    for(var i = 0 ; i < this.playerNum ; i ++){
+        var id = this.posWithPlayer[i];
+        if(!id || id == uid){
+            continue;
+        }
+        messageService.pushMessageToPlayer({uid:id , sid:"connector-server-1"} , route , msg);
+    }
+}
 pro._singleCardGameOver = function(res){//单局结束
 
 }
 pro._getPlayerPos = function(uid){
     for(var i = 0 ; i < this.playerNum ; i ++){
         var player = this.posWithPlayer[i];
-        if(!player && player.userId == uid){
+        if(!player && player== uid){
             return i;
         }
     }
@@ -212,35 +176,60 @@ pro._getEmptyPos = function(){
     }
     return -1;
 }
+/**
+ * 玩家准备
+ * @param uid
+ * @private
+ */
+pro._playerReady = function(uid){
+    if(this.readyPlayer.contains(uid)){
+        return;
+    }
+    this.readyPlayer.add(uid);
+}
+/**
+ * 玩家取消准备
+ * @param uid
+ * @private
+ */
+pro._playerCancel = function (uid) {
+    var index = utils.indexOf(this.readyPlayer , uid);
+    if(index != -1){
+        this.readyPlayer.splice(index , 1);
+    }
+}
 pro._getPlayer = function(uid){
-    for(var player in this.posWithPlayer){
-        if(player != null && player.userId == uid){
-            return player;
-        }
+    var index = utils.indexOf(this.posWithPlayer , uid);
+    if(index != -1){
+        return this.posWithPlayer[index];
     }
     return null;
 }
 
-pro._getPlayerAndPos = function(){
-    var returnValue = [];
-    for(var i = 0 ; i < this.playerNum ; i++){
-        var player = this.posWithPlayer[i];
-        if(player){
-            var uid = player.userId;
-            var item = {"uid":uid , "pos" : i , "playedPokes" : playedPokes , "totalPokes":totalPokes};
-            returnValue.push(item);
-        }
+pro._getPlayerAndPos = function(uid){
+    if(this.currentCardGame){
+        return this.currentCardGame.getCurrentStatus(uid)
+    }else{
+        return this.posWithPlayer;
     }
-    return returnValue;
 }
-
-pro._isAllReady = function(){
-    for(var i = 0 ; i < this.playerNum ; i++){
-        var player = this.posWithPlayer[i];
-        if(!player || !player.isReady){
-           return false;
-        }
+pro._playerIsInGame = function (uid) {
+    if(utils.indexOf(this.posWithPlayer , uid) != -1){
+        return true;
     }
-    return true;
+    return false;
+}
+pro._isAllReady = function(){
+    if(this.readyPlayer.length == this.playerNum){
+        return true;
+    }
+    return false;
+}
+pro._deletePlayer = function (uid) {
+    var index = utils.indexOf(this.posWithPlayer , uid);
+    if(index == -1){
+        return;
+    }
+    this.posWithPlayer.splice(index , 1);
 }
 

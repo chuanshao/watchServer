@@ -25,3 +25,14 @@ utils.size = function(obj) {
 
     return size;
 };
+
+utils.indexOf = function (arr , obj) {
+    if(typeof arr=='object'&&arr.constructor==Array){
+        for (var i = 0 ; i < arr.length ; i++){
+            if(obj == arr[i]){
+                return i;
+            }
+        }
+    }
+    return -1;
+}

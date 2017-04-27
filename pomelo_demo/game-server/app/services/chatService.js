@@ -13,6 +13,7 @@ var ChatService = function(app){
 module.exports = ChatService;
 ChatService.prototype.add = function (uid , channelName) {
     var sid = getSidByUid(uid, this.app);
+    console.log("sid......................" + sid);
     if(!sid){
         return Code.Chat.FA_UNKNOW_CONNECTOR;
     }

@@ -6,6 +6,8 @@ module.exports = {
         chat:'onChat',
         dealingCardOver:'dealingCardOver',
         singleGameOver:"singleGameOver",
+        playerEnter:"onPlayerEnter",
+        playerReady:"onPlayerReady",
         TSW:{
             onGameScoreChange:"tswGameScore"
         }

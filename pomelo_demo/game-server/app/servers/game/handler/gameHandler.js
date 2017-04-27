@@ -15,6 +15,31 @@ var GameHandler = function(app, gameService) {
     this.app = app;
     this.gameSevice = gameService;
 };
+GameHandler.prototype.addGame = function(msg , session , next){
+    var uid = session.uid;
+    var roomName = 100000;
+    var self = this;
+    var returnData = {};
+    async.parallel([
+        function (callback) {
+            self.app.rpc.chat.chatRemote.add(null, uid, roomName, function(err , res){
+                callback(null , res);
+            });
+        },
+        function (callback) {
+            self.gameSevice.addGame(roomName , uid, function (err , res) {
+                returnData = res;
+                callback(err , res);
+            });
+        }
+    ],function (err , res) {
+        if(err){
+            next(null , {"code":err});
+        }else{
+            next(null , returnData);
+        }
+    });
+}
 GameHandler.prototype.createGame = function (msg , session , next) {
     var uid = session.uid;
     var roomName = 100000;
@@ -41,7 +66,7 @@ GameHandler.prototype.createGame = function (msg , session , next) {
     });
 }
 GameHandler.prototype.ready = function (msg ,session , next) {
-    var gameId = msg.gameId;
+    var gameId = 100000;
     var uid = session.uid;
     var game = this.gameSevice.getGame(gameId);
     if(!game){
