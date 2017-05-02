@@ -4,10 +4,11 @@
  */
 var Code = require('../../../../shared/code');
 var ass = require('../../util/ass');
-var Game = require('./cardGame');
+var CardGame = require('./cardGame');
 var Event = require('../../consts/consts').Event;
 var messageService = require('../../domain/messageService');
 var utils = require('../../util/utils');
+var TSWGameStatus = require('../../consts/consts').TSWGameStatus;
 module.exports = function(setting , service)
 {
     return new Handler(setting , service);
@@ -19,8 +20,8 @@ var Handler = function(setting , service){
     this.currentCardGame = null;
     this.playerNum =setting.playerNum;
     this.setting = setting;
-    this.readyPlayer = {};//已经准备的玩家
-    this.posWithPlayer = new Array(this.playerNum);
+    this.readyPlayer = [];//已经准备的玩家
+    this.posWithPlayer = [];
 }
 var pro = Handler.prototype;
 /**
@@ -41,7 +42,7 @@ pro.add = function(uid  , cb){
     var returnData = {};
     if(self.isStarted){
         if(player){//玩家重新进入房间,返回玩家所需要的所有信息
-            cb(null , self._getPlayerAndPos());
+            cb(null , self._getAllInfo());
             self._pushMessageToOther(uid , Event.playerEnter , {"userId" : uid , "pos" : self._getPlayerPos(uid)});
         }else{
             cb(Code.GAME.ROOM_IS_NOT_EXIT , null); //房间不存在
@@ -55,9 +56,9 @@ pro.add = function(uid  , cb){
             }
             self.posWithPlayer[emptyPos] = uid;
             self._pushMessageToOther(uid , Event.playerEnter , {"userId" : uid , "pos" : emptyPos});
-            cb(null , self._getPlayerAndPos());
+            cb(null , self._getAllInfo());
         }else{//重新进入  但是没有开始返回现在的状态
-            cb(null , self._getPlayerAndPos());
+            cb(null , self._getAllInfo());
         }
     }
 }
@@ -93,11 +94,11 @@ pro.playerReady = function(uid , cb){//准备游戏  向其他玩家推送准备
     }
     this._playerReady(uid);
     if(self._isAllReady()){ //所有玩家都已经准备就绪
-        var parmas = {"players" : self.posWithPlayer , "playNum":self.playerNum , "pukeConfig":ass.getConfig('withoutTT')};
-        this._initCardGame(parmas);
+        var gameConfig = {"players" : self.posWithPlayer , "playNum":self.playerNum , "pukeConfig":ass.getConfig('withoutTT')};
+        this._initCardGame(gameConfig);
     }
-    cb(null , {"readyResult":true});
     self._pushMessageToOther(uid , Event.playerReady , {"uid":uid});
+    cb(null , {"readyResult":true});
 }
 /**
  * 玩家离开
@@ -118,15 +119,15 @@ pro.sendPokes = function (uid , pokes , cb) {
         cb(code , res);
     });
 }
-pro._initCardGame = function(parmas){
-    this.currentCardGame = new Game(parmas);
+pro._initCardGame = function(gameConfig){
     var self = this;
-    this.currentCardGame.on(Event.dealingCardOver , function(res){//fapai
-        for(var pos in  self.posWithPlayer){
+    self.currentCardGame = new CardGame(gameConfig);
+    var cardData = self.currentCardGame.dealingCard();//fapai
+    self.isStarted = true;
+    for(var pos in  self.posWithPlayer){
             var uid = self.posWithPlayer[pos];
-            messageService.pushMessageToPlayer(uid ,Event.dealingCardOver,res);
-        }
-    });
+            messageService.pushMessageToPlayer({uid:uid , sid:"connector-server-1"} ,Event.dealingCardOver,cardData[uid]);
+    }
     this.currentCardGame.on(Event.TSW.onGameScoreChange , function(res){//fapai
         for(var pos in  self.posWithPlayer){
             var uid = self.posWithPlayer[pos];
@@ -182,10 +183,11 @@ pro._getEmptyPos = function(){
  * @private
  */
 pro._playerReady = function(uid){
-    if(this.readyPlayer.contains(uid)){
+    var index = utils.indexOf(this.readyPlayer , uid);
+    if(index != -1){
         return;
     }
-    this.readyPlayer.add(uid);
+    this.readyPlayer.push(uid);
 }
 /**
  * 玩家取消准备
@@ -206,11 +208,20 @@ pro._getPlayer = function(uid){
     return null;
 }
 
-pro._getPlayerAndPos = function(uid){
+pro._getAllInfo = function(uid){
+    var allInfo = {} , players = [] ;
+    allInfo["players"] = players;
     if(this.currentCardGame){
-        return this.currentCardGame.getCurrentStatus(uid)
+        return this.currentCardGame.getCurrentFrameInfo(uid)
     }else{
-        return this.posWithPlayer;
+        allInfo["currentStatus"] = TSWGameStatus.prepare;//0表示未开始
+        for(var i = 0 ; i < this.posWithPlayer.length ; i++){
+            var player = {};
+            player["pos"] = i;
+            player["uid"] = this.posWithPlayer[i];
+            players.push(player);
+        }
+        return allInfo;
     }
 }
 pro._playerIsInGame = function (uid) {

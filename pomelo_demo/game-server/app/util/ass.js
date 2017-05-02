@@ -15,7 +15,7 @@ function _loadConfig (){
     var path = "../../config/tspoke/";
     var data = {};
     if (configFiles.length === 0) {
-        var dir = './config/tspoke';
+        var dir = './game-server/config/tspoke';
         var name, reg = /\.json$/;
         fs.readdirSync(dir).forEach(function(file) {
             if (reg.test(file)) {

@@ -7,30 +7,31 @@ var Player = require('./player');
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
 var Event = require('../../consts/consts').Event;
+var TSWGameStatus = require('../../consts/consts').TSWGameStatus;
+module.exports = function(gameParam)
+{
+    return new Handler(gameParam);
+}
 var Handler = function(gameParam)
 {
     EventEmitter.call(this);
+    this.currentStatus = TSWGameStatus.setScore;
     this.posWithPlayer = [];
+    this.bottomCard = [];
     this.currentPlayer = null;//当前应该出牌的玩家
     this.lastSendPlayer = null;//最后出牌的玩家
     this.playIndex = 0;
     this.banker = null; //庄家
     this.maxScore = 90;//最大分数
-    this.playerNum = gameParam.playerNum;
+    this.playerNum = gameParam["playNum"];
     this.playRule = new PlayRule();
     this.currentScore = 0; //当前分数,默认最多
     this.giveUpSetScoreNum = 0; //放弃叫分玩家数量
     this.currentSetScorePlayer = null;//当前叫分玩家
-    this.pukeConfig = gameParam.pukeConfig;
-    this._init(gameParam.posWithPlayer);
-    this._dealingCard();//发牌
+    this.pukeConfig = gameParam["pukeConfig"];
+    this._init(gameParam["players"]);
 }
 util.inherits(Handler, EventEmitter);
-module.exports = function(gameParam)
-{
-    return new Handler(gameParam);
-}
-
 var pro = Handler.prototype;
 /**
  *是否能提前结束
@@ -50,7 +51,7 @@ pro.setScore = function(uid, score , cb){
         return;
     }
     this.score = score;
-    this.currentSetScorePlayer = this._getPlayerPos(uid);
+    this.currentSetScorePlayer = this._getPlayer(uid);
     if(score == 0){
         this._setScoreOver(cb);
     }
@@ -90,10 +91,14 @@ pro.playPoke = function(uid , pokes , cb)
         cb(Code.GAME.SEND_POKE_Fail , null);
     }
 }
+pro.bankerBuckleCard = function (uid , pokes) {
+    this.currentStatus = TSWGameStatus.playing;
+}
 pro._setScoreOver = function(cb){
     this._initBankAndFirstSend();//定庄家
 }
 pro._init = function(pwp){
+
     for(var i = 0 ; i < this.playerNum ; i++){
         var uid = pwp[i];
         var player = new Player(uid , i);
@@ -106,6 +111,7 @@ pro._setScoreIsOver = function(){
 pro._initBankAndFirstSend = function () {
     this.banker = this.currentSetScorePlayer;
     this.currentPlayer = this.currentSetScorePlayer;
+    this.currentStatus = TSWGameStatus.bankerBuckleCard;
 }
 /**
  * 统计结果
@@ -182,21 +188,23 @@ pro._isOver = function()
  * 发牌
  * @private
  */
-pro._dealingCard = function(){
+pro.dealingCard = function(){
     var self = this;
     var readyArr = pro._washCard(self.pukeConfig , 0 , 3);//
-    var eachPlayerHas = Math.floor(readyArr / self.playerNum);
+    var eachPlayerHas = Math.floor(readyArr.length / self.playerNum);
+    console.log("readyArr" + readyArr);
     for(var i = 0 ; i < self.playerNum ; i++){
         var player = self.posWithPlayer[i];
         player.setPokes(readyArr.splice(eachPlayerHas * i , eachPlayerHas * i+1));
     }
-    this.emit(Event.dealingCardOver , this._getDealingCardData());
+    return self._getDealingCardData();
 }
 pro._getDealingCardData = function(){
     var returnData = {};
-    for(var i = 0 ; i < self.playerNum ; i++){
+    var self = this;
+    for(var i = 0 ; i < self.posWithPlayer.length ; i++){
         var player = self.posWithPlayer[i];
-        var uid = player.userId;
+        var uid = player.getUserId();
         returnData[uid] = player.getTotalPokes();
     }
     return returnData;
@@ -210,7 +218,7 @@ pro._getDealingCardData = function(){
  */
 pro._washCard = function(cardArr , index , total){
     var nextIndex = index + 1;
-    var returnArr = [];
+    var returnArr = cardArr;
     for(var i = 0 ; i < 50 ; i++){
         var index1 = Math.floor(Math.random() * cardArr.length);
         var index2 = Math.floor(Math.random() * cardArr.length);
@@ -219,7 +227,7 @@ pro._washCard = function(cardArr , index , total){
         returnArr[index2] = switchNum;
     }
     if(nextIndex == total){
-        return pro._washCard(cardArr , nextIndex , total);
+        return pro._washCard(returnArr , nextIndex , total);
     }else{
         return returnArr;
     }
@@ -243,18 +251,35 @@ pro._getPlayer = function(uid)
     return null;
 }
 
-pro.getCurrentStatus = function(uid){
-    var returnData ={};
+pro.getCurrentFrameInfo = function(uid){
+    var returnData = {} , players = []  ;
+    returnData["players"] = players;
+    returnData["currentStatus"] = this.currentStatus;
+    returnData["currentScore"] = this.currentScore;
     for(var i = 0 ; i < this.playerNum ; i ++)
     {
-        var player = this.posWithPlayer[i];
-        if(player.id == uid)
+        var player = {};
+        player["pos"] = this.posWithPlayer[i].getPos();
+        player["uid"] = this.posWithPlayer[i].getUserId();
+        if(player.uid == uid)
         {
-            returnData[uid] = {"sendPoke" : player.getPlayedPokes() , "totalPoke" : player.getTotalPokes()};
+            player["totalPoke"] =this.posWithPlayer[i].getTotalPokes();
         }
-        returnData[uid] = {"sendPoke" : player.getPlayedPokes()};
+        switch (this.currentStatus){//判断当前处于什么状态
+            case TSWGameStatus.setScore:
+                player["isGiveUp"] = this.posWithPlayer[i].isGiveUp;
+                returnData["setScorePlayer"] = this.currentSetScorePlayer.getUserId();
+                break;
+            case TSWGameStatus.bankerBuckleCard:
+            case TSWGameStatus.playing:
+                returnData["bankerId"] = this.banker.getUserId();
+                if(uid == this.banker.getUserId()){
+                    returnData["bottomCard"] = this.bottomCard;
+                }
+                break;
+        }
+        player["sendPoke"] =this.posWithPlayer[i].getPlayedPokes();
     }
-    returnData["score"] = this.currentScore;
     return returnData;
 }
 

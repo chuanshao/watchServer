@@ -7,7 +7,7 @@ var Player = function(uid , currentPos)
     this.totalPokes = [];
     this.playedPokes = [];
     this.nextPlayer = null;
-    this.isReady = false;
+    this.isGiveUp = false;
     this.currentPos= currentPos;
 }
 var pro = Player.prototype;
@@ -24,8 +24,14 @@ pro.setPokes = function(pokes)
 {
     this.totalPokes = pokes;
 }
+pro.getUserId = function () {
+    return this.userId;
+}
 pro.setNextPlayer = function(player){
     this.nextPlayer = player;
+}
+pro.getPos = function(){
+    return this.currentPos;
 }
 pro.getNextPlayer = function()
 {

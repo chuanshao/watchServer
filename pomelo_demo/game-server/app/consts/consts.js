@@ -11,5 +11,11 @@ module.exports = {
         TSW:{
             onGameScoreChange:"tswGameScore"
         }
+    },
+    TSWGameStatus:{
+        prepare : 0,
+        setScore:1,
+        bankerBuckleCard:2,
+        playing:3
     }
 }

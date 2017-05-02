@@ -44,6 +44,7 @@ GameHandler.prototype.createGame = function (msg , session , next) {
     var uid = session.uid;
     var roomName = 100000;
     var self = this;
+    var returnData;
     async.parallel([
         function (callback) {
             self.app.rpc.chat.chatRemote.add(null, uid, roomName, function(err , res){
@@ -54,6 +55,7 @@ GameHandler.prototype.createGame = function (msg , session , next) {
              var setting = {"playerNum":2};
             self.gameSevice.createGame(roomName, setting);
             self.gameSevice.addGame(roomName , uid, function (err , res) {
+                returnData = res;
                 callback(err , res);
             });
         }
@@ -61,7 +63,7 @@ GameHandler.prototype.createGame = function (msg , session , next) {
         if(err){
             next(null , {"code":err});
         }else{
-            next(null , {"success":""});
+            next(null , returnData);
         }
     });
 }
